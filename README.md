@@ -1,5 +1,53 @@
 # llmops-katy-chen
 
+## Use case
+### 1. User and problem
+
+This is a recipe assistant for supermarket customers planning
+everyday meals. It would help them find a suitable recipe on the supermarket's
+website without browsing many recipes manually. Customers could describe the
+ingredients they already have, their available cooking time, and their preferences,
+then refine the suggestions through follow-up questions.
+
+### 2. Data
+
+The project will use the public Kaggle dataset
+[Better Recipes for a Better Life](https://www.kaggle.com/datasets/thedevastator/better-recipes-for-a-better-life),
+which is already referenced in the recipe-ingestion notebook. No confidential
+company or customer data will be used.
+
+- **Recipe documents:** recipe names, ingredient lists, and preparation directions
+  will provide the searchable content for retrieving relevant recipes.
+- **Structured data:** cooking and preparation times, servings, ratings, cuisine
+  categories, source URLs, and nutrition information where available will support
+  filtering and displaying results. Missing or incomplete values will be treated
+  as unknown rather than inferred as facts.
+- **Possible later additions:** a small mock product catalogue with ingredient
+  prices could support shopping suggestions and illustrative budget estimates.
+  These would not represent live supermarket prices or availability.
+
+### 3. Example interactions
+
+Customers would use a chat interface to describe a meal and refine the results:
+
+- "Find a high-protein dinner for four people that takes no more than 30 minutes."
+- "I have chickpeas, tomatoes, and spinach. Which dinners can I make with them?"
+- "Show me a vegetarian alternative from those suggestions."
+- "Show me the ingredients and preparation steps for the second recipe."
+
+
+### 4. Scope
+
+The smallest useful course version will be a standalone chat prototype covering
+around 100 dinner recipes with a stated total cooking time of 30 minutes or less.
+It will retrieve recipes from this curated collection, use available serving and
+ingredient information to narrow suggestions, and answer follow-up questions using
+the retrieved recipe content. It will not invent recipes or claim a match when
+the required information is missing.
+
+
+## Course repository
+
 Your repository for the LLMOps course on Databricks. Everything you need in
 the course workspace was provisioned for you before you got this repo, and every id is already in
 `project_config.yml`: you configure nothing.
@@ -57,8 +105,14 @@ suspension after five idle minutes. Creating extra branches or computes can incr
 
 ## What is in the repo
 
-- `src/arxiv_curator/`: starts with `config.py`, which loads `project_config.yml`.
-  Add the other course modules as you work through the lectures.
+
+
+- `src/recipe_curator/`: contains `config.py`, which loads `project_config.yml`, and
+  `data_processor.py`, which downloads arXiv PDFs, parses them with `ai_parse_document`, and
+  extracts cleaned chunks into Unity Catalog tables.
+- `notebooks/`: `00_hello.py` is the bundle's hello-world task;
+  `01_arxiv_data_ingestion.py` fetches recent AI/ML paper metadata from arXiv and writes it to
+  the target schema's `arxiv_papers` table. `lecture/lecture_1/` contains the lecture notebooks.
 - `lecture_1/`, `lecture_2/` and so on, when you add them: copy a lecture's folder from the course
   code as it is, to the root of this repo, where its notebooks find `project_config.yml` one level up.
   Commit it with the hooks installed (below): the first commit stops once, after the hooks have
@@ -66,11 +120,11 @@ suspension after five idle minutes. Creating extra branches or computes can incr
   commit again. Ruff rules are configured in `pyproject.toml`.
 - `databricks.yml` and `resources/`: the bundle, with three targets, `dev` (your sandbox, in
   development mode, the default), `acc` and `prd`. It builds the package as a wheel with `uv build`
-  and deploys the `hello` job, named after its target (`job-hello-katy-chen-dev`,
-  `-acc`, `-prd`), one serverless notebook task that installs the wheel and writes one row to the
-  `hello` table of your schema in the target's catalog, such as
-  `llmops_dev.katy_chen.hello`. The course's onboarding
-  does not deploy these jobs yet. Deployment workflows are introduced in a later lecture.
+  and defines two jobs: `hello`, which installs the wheel and writes a row to the target schema's
+  `hello` table, and `arxiv-data-pipeline`, which runs `01_arxiv_data_ingestion.py` daily at 06:00
+  Europe/Amsterdam. Both jobs use serverless notebook tasks. Job schedules are paused by default;
+  the pipeline job is defined in the bundle but is not deployed by course onboarding. Deployment
+  workflows are introduced in a later lecture.
 - `pyproject.toml` and `version.txt`: the package and its version, bumped as the lectures ask.
 - `tests/`: your tests; `test_config.py` checks that `project_config.yml` loads.
 - `.github/workflows/ci.yml`: on every pull request and push to `main`, installs the package with
@@ -84,5 +138,3 @@ uv sync --extra dev
 uvx pre-commit install
 databricks bundle validate -t dev
 ```
-
-Each environment logs to its own MLflow experiment and UC trace tables in its matching catalog. You can manage the dev experiment and write dev traces; acc and prd are read-only for you. Each deploy service principal manages its own environment’s experiment and writes to that environment’s schema.

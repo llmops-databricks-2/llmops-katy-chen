@@ -1,7 +1,7 @@
 resources:
   jobs:
     data-pipeline:
-      name: arxiv-data-pipeline
+      name: ingest-recipie-data-pipeline
 
       schedule:
         quartz_cron_expression: "0 0 6 * * ?"
@@ -17,9 +17,9 @@ resources:
               - ../dist/*.whl
 
       tasks:
-        - task_key: arxiv_data_ingestion
+        - task_key: ingest_recipie_data
           environment_key: default
           notebook_task:
-            notebook_path: ../notebooks/01_arxiv_data_ingestion.py
+            notebook_path: ../notebooks/01_ingest_recipie_data.py
             base_parameters:
               env: "${bundle.target}"
