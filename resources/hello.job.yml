@@ -1,4 +1,4 @@
-# The hello-world job: one serverless notebook task that installs your arxiv_curator wheel,
+# The hello-world job: one serverless notebook task that installs your recipe_curator wheel,
 # loads project_config.yml and writes one row to the hello table in your schema of the target's
 # catalog (dev: llmops_dev.katy_chen).
 # It runs as whoever deploys the bundle; the target's deploy principal does that from GitHub
@@ -9,11 +9,11 @@ resources:
   jobs:
     hello:
       name: job-hello-katy-chen-${bundle.target}
-      budget_policy_id: "c7e24808-d4b5-373a-a34c-bbe50a5f5d3f"
+      budget_policy_id: "${var.usage_policy_id}"
       environments:
         - environment_key: default
           spec:
-            environment_version: "6"
+            environment_version: "5"
             dependencies:
               - ../dist/*.whl
 
@@ -21,6 +21,6 @@ resources:
         - task_key: hello
           environment_key: default
           notebook_task:
-            notebook_path: deployment_notebooks/hello.py
+            notebook_path: ../notebooks/00_hello.py
             base_parameters:
               env: ${bundle.target}

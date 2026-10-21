@@ -1,7 +1,7 @@
 [project]
-name = "arxiv-curator"
+name = "recipe-curator"
 dynamic = ["version"]
-description = "Arxiv Curator - Shared utilities for LLMOps Course on Databricks"
+description = "Recipe Curator - Shared utilities for LLMOps Course on Databricks"
 requires-python = "==3.12.*"
 dependencies = [
     "cffi==1.17.1",
@@ -38,7 +38,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where =["src"]
-include = ["arxiv_curator*"]
+include = ["recipe_curator*"]
 
 [tool.setuptools.dynamic]
 version = { file = "version.txt" }
@@ -71,6 +71,10 @@ lint.ignore = [
     "E501", # line-too-long
     "C901", # too complex
 ]
+lint.task-tags = ["TODO", "FIXME", "XXX", "MAGIC"]
+
+[tool.ruff.lint.per-file-ignores]
+"notebooks/**/*.py" = ["D100"]
 
 [tool.ruff.format]
 indent-style = "space"
