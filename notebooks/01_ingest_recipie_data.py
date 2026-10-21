@@ -3,14 +3,16 @@
 
 # COMMAND ----------
 
+import os
+import shutil
+
+import kagglehub
 from loguru import logger
 from pyspark.sql import SparkSession
-from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DoubleType
 from pyspark.sql import functions as F
-from recipe_curator.config import get_env, load_config 
-import kagglehub
-import shutil
-import os
+from pyspark.sql.types import DoubleType, IntegerType, StringType, StructField, StructType
+
+from recipe_curator.config import get_env, load_config
 
 # COMMAND ----------
 # Create Spark session
@@ -46,18 +48,18 @@ for f in os.listdir(target_dir):
 # Schema for recipes.csv (columns in file order; the unnamed first column is the row index)
 recipes_schema = StructType(
     [
-        StructField("row_id", IntegerType(), True),        # unnamed index column (_c0) in the CSV
+        StructField("row_id", IntegerType(), True),  # unnamed index column (_c0) in the CSV
         StructField("recipe_name", StringType(), True),
-        StructField("prep_time", StringType(), True),      # e.g. "30 mins"
+        StructField("prep_time", StringType(), True),  # e.g. "30 mins"
         StructField("cook_time", StringType(), True),
         StructField("total_time", StringType(), True),
         StructField("servings", IntegerType(), True),
         StructField("yield", StringType(), True),
-        StructField("ingredients", StringType(), True),    # comma-separated ingredient text
+        StructField("ingredients", StringType(), True),  # comma-separated ingredient text
         StructField("directions", StringType(), True),
-        StructField("rating", DoubleType(), True),         # e.g. 4.8
+        StructField("rating", DoubleType(), True),  # e.g. 4.8
         StructField("url", StringType(), True),
-        StructField("cuisine_path", StringType(), True),   # e.g. "/Desserts/Pies/Apple Pie Recipes/"
+        StructField("cuisine_path", StringType(), True),  # e.g. "/Desserts/Pies/Apple Pie Recipes/"
         StructField("nutrition", StringType(), True),
         StructField("timing", StringType(), True),
         StructField("img_src", StringType(), True),
@@ -65,20 +67,16 @@ recipes_schema = StructType(
 )
 
 input_df = (
-    spark.read
-    .option("header", "true")
+    spark.read.option("header", "true")
     .option("multiLine", "true")
     .schema(recipes_schema)
     .csv(f"/Volumes/{CATALOG}/{SCHEMA}/{VOLUME_NAME}/better_recipes/recipes.csv")
 )
 
 
-
 (
-    input_df
-    .withColumn("ingestion_timestamp", F.current_timestamp())
-    .write
-    .format("delta")
+    input_df.withColumn("ingestion_timestamp", F.current_timestamp())
+    .write.format("delta")
     .mode("overwrite")
     .option("overwriteSchema", "true")
     .saveAsTable(f"{CATALOG}.{SCHEMA}.recipes_input")

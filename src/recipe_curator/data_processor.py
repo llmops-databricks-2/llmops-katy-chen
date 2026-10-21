@@ -1,4 +1,5 @@
-"""
+"""Process arXiv papers from download to cleaned text chunks.
+
 arXiv API
    ↓ (download_and_store_papers)
 PDFs in Volume + arxiv_papers table
@@ -32,8 +33,8 @@ from recipe_curator.config import ProjectConfig
 
 
 class DataProcessor:
-    """
-    DataProcessor handles the complete workflow of:
+    """Handle the complete arXiv paper processing workflow.
+
     - Downloading papers from arXiv
     - Storing paper metadata
     - Parsing PDFs with ai_parse_document
@@ -42,12 +43,12 @@ class DataProcessor:
     """
 
     def __init__(self, spark: SparkSession, config: ProjectConfig) -> None:
-        """
-        Initialize DataProcessor with Spark session and configuration.
+        """Initialize DataProcessor with Spark session and configuration.
 
         Args:
             spark: SparkSession instance
             config: ProjectConfig object with table configurations
+
         """
         self.spark = spark
         self.cfg = config
@@ -62,15 +63,15 @@ class DataProcessor:
         self.parsed_table = f"{self.catalog}.{self.schema}.ai_parsed_docs_table"
 
     def _get_range_start(self) -> str:
-        """
-        Get start time range for arxiv paper search.
+        """Get start time range for arxiv paper search.
+
         If arxiv_papers table exists, uses max(processed) as start.
         Otherwise, uses 3 days ago as start.
 
         Returns:
             start string in "YYYYMMDDHHMM" format
-        """
 
+        """
         if self.spark.catalog.tableExists(self.papers_table):
             result = self.spark.sql(f"""
                 SELECT max(processed)
@@ -83,9 +84,7 @@ class DataProcessor:
                 logger.info(f"Found existing arxiv_papers table. Starting from: {start}")
             else:
                 start = time.strftime("%Y%m%d%H%M", time.gmtime(time.time() - 24 * 3600 * 3))
-                logger.info(
-                    f"Table exists but no processed records. Starting from 3 days ago: {start}"
-                )
+                logger.info(f"Table exists but no processed records. Starting from 3 days ago: {start}")
         else:
             start = time.strftime("%Y%m%d%H%M", time.gmtime(time.time() - 24 * 3600 * 3))
             logger.info(f"No existing arxiv_papers table. Starting from 3 days ago: {start}")
@@ -94,13 +93,12 @@ class DataProcessor:
     def download_and_store_papers(
         self,
     ) -> list[dict] | None:
-        """
-        Download papers from arxiv and store metadata
-        in arxiv_papers table.
+        """Download papers from arxiv and store metadata in arxiv_papers table.
 
         Returns:
             List of paper metadata dictionaries if papers were downloaded,
             otherwise None
+
         """
         start = self._get_range_start()
 
@@ -156,20 +154,14 @@ class DataProcessor:
             ]
         )
 
-        metadata_df = self.spark.createDataFrame(records, schema=schema).withColumn(
-            "ingest_ts", current_timestamp()
-        )
+        metadata_df = self.spark.createDataFrame(records, schema=schema).withColumn("ingest_ts", current_timestamp())
 
         # Create table if it doesn't exist
         metadata_df.write.format("delta").mode("append").saveAsTable(self.papers_table)
         return records
 
     def parse_pdfs_with_ai(self) -> None:
-        """
-        Parse PDFs using ai_parse_document and store in ai_parsed_docs table.
-
-        """
-
+        """Parse PDFs using ai_parse_document and store in ai_parsed_docs table."""
         self.spark.sql(f"""
             CREATE TABLE IF NOT EXISTS {self.parsed_table} (
                 path STRING,
@@ -194,8 +186,7 @@ class DataProcessor:
 
     @staticmethod
     def _extract_chunks(parsed_content_json: str) -> list[tuple[str, str]]:
-        """
-        Extract chunks from parsed_content JSON.
+        """Extract chunks from parsed_content JSON.
 
         Args:
             parsed_content_json: JSON string containing
@@ -203,6 +194,7 @@ class DataProcessor:
 
         Returns:
             List of tuples containing (chunk_id, content)
+
         """
         parsed_dict = json.loads(parsed_content_json)
         chunks = []
@@ -217,26 +209,27 @@ class DataProcessor:
 
     @staticmethod
     def _extract_paper_id(path: str) -> str:
-        """
-        Extract paper ID from file path.
+        """Extract paper ID from file path.
 
         Args:
             path: File path (e.g., "/path/to/paper_id.pdf")
 
         Returns:
             Paper ID extracted from the path
+
         """
         return path.replace(".pdf", "").split("/")[-1]
 
     @staticmethod
     def _clean_chunk(text: str) -> str:
-        """
-        Clean and normalize chunk text
+        """Clean and normalize chunk text.
+
         Args:
             text: Raw text content
 
         Returns:
             Cleaned text content
+
         """
         # Fix hyphenation across line breaks:
         # "docu-\nments" => "documents"
@@ -251,8 +244,8 @@ class DataProcessor:
         return t.strip()
 
     def process_chunks(self) -> None:
-        """
-        Process parsed documents to extract and clean chunks.
+        """Process parsed documents to extract and clean chunks.
+
         Reads from ai_parsed_docs table and saves to arxiv_chunks table.
         """
         logger.info(f"Processing parsed documents from {self.parsed_table} for end date {self.end}")
@@ -310,9 +303,7 @@ class DataProcessor:
         logger.info(f"Change Data Feed enabled for {arxiv_chunks_table}")
 
     def process_and_save(self) -> None:
-        """
-        Complete workflow: download papers, parse PDFs, and process chunks.
-        """
+        """Complete workflow: download papers, parse PDFs, and process chunks."""
         # Step 1: Download papers and store metadata
         records = self.download_and_store_papers()
 

@@ -6,7 +6,8 @@ import arxiv
 from loguru import logger
 from pyspark.sql import SparkSession
 from pyspark.sql.types import ArrayType, LongType, StringType, StructField, StructType
-from recipe_curator.config import get_env, load_config 
+
+from recipe_curator.config import get_env, load_config
 
 # COMMAND ----------
 # Create Spark session
@@ -28,9 +29,10 @@ logger.info(f"Schema {CATALOG}.{SCHEMA} ready")
 # Fetch arXiv Paper Metadata from arXiv API: https://arxiv.org/help/api/index
 
 
-def fetch_arxiv_papers(query: str = "cat:cs.AI OR cat:cs.LG", max_results: int = 100):
-    """
-    Fetch arXiv papers using the arXiv API.
+def fetch_arxiv_papers(
+    query: str = "cat:cs.AI OR cat:cs.LG", max_results: int = 100
+) -> list[dict[str, str | int | list[str] | None]]:
+    """Fetch arXiv papers using the arXiv API.
 
     Args:
         query: arXiv search query (default: AI and ML papers)
@@ -38,6 +40,7 @@ def fetch_arxiv_papers(query: str = "cat:cs.AI OR cat:cs.LG", max_results: int =
 
     Returns:
         List of paper metadata dictionaries
+
     """
     client = arxiv.Client()
     search = arxiv.Search(
@@ -54,9 +57,7 @@ def fetch_arxiv_papers(query: str = "cat:cs.AI OR cat:cs.LG", max_results: int =
             "title": result.title,
             "authors": [author.name for author in result.authors],  # Array to match reference code
             "summary": result.summary,
-            "published": int(
-                result.published.strftime("%Y%m%d%H%M")
-            ),  # Long to match reference code
+            "published": int(result.published.strftime("%Y%m%d%H%M")),  # Long to match reference code
             "updated": result.updated.isoformat() if result.updated else None,
             "categories": ", ".join(result.categories),
             "pdf_url": result.pdf_url,
@@ -133,6 +134,4 @@ logger.info("Papers by primary category:")
 papers_df.groupBy("primary_category").count().orderBy("count", ascending=False).show()
 
 logger.info("Most recent papers:")
-papers_df.select("title", "published", "arxiv_id").orderBy("published", ascending=False).show(
-    5, truncate=60
-)
+papers_df.select("title", "published", "arxiv_id").orderBy("published", ascending=False).show(5, truncate=60)

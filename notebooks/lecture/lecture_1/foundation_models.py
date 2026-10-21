@@ -233,9 +233,7 @@ def calculate_api_cost(
     return input_cost + output_cost
 
 
-def calculate_provisioned_cost(
-    hours: float, model_units: int, dbu_per_hour_per_50_units: float
-) -> float:
+def calculate_provisioned_cost(hours: float, model_units: int, dbu_per_hour_per_50_units: float) -> float:
     """Estimate on-demand DBUs for a constant allocation over the given hours."""
     return hours * (model_units / 50) * dbu_per_hour_per_50_units
 

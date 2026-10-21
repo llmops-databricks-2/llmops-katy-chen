@@ -88,9 +88,7 @@ workspace_client = None
 # COMMAND ----------
 
 
-def estimate_on_demand_cost(
-    model_units: int, allocated_hours: float, dbu_per_hour_per_50_units: float
-) -> float:
+def estimate_on_demand_cost(model_units: int, allocated_hours: float, dbu_per_hour_per_50_units: float) -> float:
     """Estimate DBUs for a constant on-demand allocation, including idle hours."""
     if model_units <= 0 or allocated_hours < 0 or dbu_per_hour_per_50_units <= 0:
         raise ValueError("Capacity and rate must be positive; allocated hours cannot be negative.")
@@ -120,11 +118,7 @@ logger.info(f"Illustrative 50 units for 2 hours: {example_dbu:.3f} DBUs")
 
 if RUN_DEPLOYMENT:
     workspace_client = WorkspaceClient(host=WORKSPACE_URL)
-    if (
-        not isinstance(CAPACITY_CHUNKS, int)
-        or isinstance(CAPACITY_CHUNKS, bool)
-        or CAPACITY_CHUNKS < 1
-    ):
+    if not isinstance(CAPACITY_CHUNKS, int) or isinstance(CAPACITY_CHUNKS, bool) or CAPACITY_CHUNKS < 1:
         raise ValueError("CAPACITY_CHUNKS must be a positive integer.")
 
     optimization = workspace_client.api_client.do(
@@ -136,9 +130,7 @@ if RUN_DEPLOYMENT:
         raise ValueError(f"{MODEL_NAME} version {MODEL_VERSION} is not eligible.")
     chunk_size = optimization.get("model_unit_chunk_size")
     if not isinstance(chunk_size, int) or isinstance(chunk_size, bool) or chunk_size <= 0:
-        raise ValueError(
-            "No valid model-unit chunk size returned; do not use throughput-band values."
-        )
+        raise ValueError("No valid model-unit chunk size returned; do not use throughput-band values.")
 
     desired_model_units = CAPACITY_CHUNKS * chunk_size
     logger.info(f"Requested on-demand allocation: {desired_model_units} model units")
@@ -151,9 +143,7 @@ if RUN_DEPLOYMENT:
     except NotFound:
         pass
     else:
-        raise ValueError(
-            f"Endpoint {ENDPOINT_NAME} already exists; inspect it or choose a new lab name."
-        )
+        raise ValueError(f"Endpoint {ENDPOINT_NAME} already exists; inspect it or choose a new lab name.")
 
     try:
         workspace_client.api_client.do(
@@ -248,9 +238,7 @@ if RUN_INFERENCE:
     response = client.responses.create(
         model=MODEL_SERVICE_NAME,
         max_output_tokens=256,
-        input=[
-            {"role": "user", "content": "Explain the benefits of provisioned throughput for LLMs."}
-        ],
+        input=[{"role": "user", "content": "Explain the benefits of provisioned throughput for LLMs."}],
     )
     logger.info(response.output_text)
     if response.usage is not None:
@@ -285,9 +273,7 @@ def cleanup_lab_resources(client: WorkspaceClient, service_name: str, endpoint_n
     """Delete the explicitly selected lab service and endpoint; tolerate absent resources."""
     logger.info(f"Cleaning up service {service_name} and endpoint {endpoint_name}")
     try:
-        client.api_client.do(
-            "DELETE", f"/api/2.1/unity-catalog/model-services/{quote(service_name, safe='')}"
-        )
+        client.api_client.do("DELETE", f"/api/2.1/unity-catalog/model-services/{quote(service_name, safe='')}")
     except NotFound:
         logger.info(f"Lab service already absent: {service_name}")
     else:
@@ -305,6 +291,4 @@ if RUN_CLEANUP:
     cleanup_client = WorkspaceClient(host=WORKSPACE_URL)
     cleanup_lab_resources(cleanup_client, MODEL_SERVICE_NAME, ENDPOINT_NAME)
 else:
-    logger.info(
-        "Cleanup skipped: set RUN_CLEANUP=True in this cell and rerun it to delete the lab resources."
-    )
+    logger.info("Cleanup skipped: set RUN_CLEANUP=True in this cell and rerun it to delete the lab resources.")
