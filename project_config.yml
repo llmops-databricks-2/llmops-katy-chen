@@ -1,5 +1,7 @@
 # Project configuration for the LLMOps course, filled in for you at onboarding.
 # Resources are provisioned at onboarding except the volume, which you create during the course.
+# embedding_endpoint is the serving endpoint for ai_query, AI Search and DatabricksServingEndpoint;
+# embedding_service is the AI Gateway model service for the OpenAI client (README.md).
 
 # Your usage policy: set it on every serverless job, endpoint and app you create.
 usage_policy_id: "c7e24808-d4b5-373a-a34c-bbe50a5f5d3f"
@@ -13,9 +15,10 @@ dev:
   schema: "katy_chen"
   volume: "arxiv_files"
   llm_endpoint: "course_ops.gateway.chat"
-  embedding_endpoint: "course_ops.gateway.embed"
-  warehouse_id: "b11cb5f20e908516"
-  experiment_path: "/llmops/katy_chen-dev"
+  embedding_endpoint: "databricks-gte-large-en"
+  embedding_service: "course_ops.gateway.embed"
+  warehouse_id: "2458a9ee0cc14a64"
+  experiment_path: "/llmops/katy-chen-dev"
   # Your provisioned Lakebase project.
   lakebase_instance: "lb-llmops-katy-chen"
 
@@ -25,9 +28,10 @@ acc:
   schema: "katy_chen"
   volume: "arxiv_files"
   llm_endpoint: "course_ops.gateway.chat"
-  embedding_endpoint: "course_ops.gateway.embed"
-  warehouse_id: "b11cb5f20e908516"
-  experiment_path: "/llmops/katy_chen-acc"
+  embedding_endpoint: "databricks-gte-large-en"
+  embedding_service: "course_ops.gateway.embed"
+  warehouse_id: "2458a9ee0cc14a64"
+  experiment_path: "/llmops/katy-chen-acc"
   # Your provisioned Lakebase project for this environment.
   lakebase_instance: "lb-llmops-katy-chen"
 
@@ -37,8 +41,9 @@ prd:
   schema: "katy_chen"
   volume: "arxiv_files"
   llm_endpoint: "course_ops.gateway.chat"
-  embedding_endpoint: "course_ops.gateway.embed"
-  warehouse_id: "b11cb5f20e908516"
-  experiment_path: "/llmops/katy_chen-prd"
+  embedding_endpoint: "databricks-gte-large-en"
+  embedding_service: "course_ops.gateway.embed"
+  warehouse_id: "2458a9ee0cc14a64"
+  experiment_path: "/llmops/katy-chen-prd"
   # Your provisioned Lakebase project for this environment.
   lakebase_instance: "lb-llmops-katy-chen"
