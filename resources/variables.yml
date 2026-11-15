@@ -2,3 +2,15 @@ variables:
 
   usage_policy_id:
     default: c7e24808-d4b5-373a-a34c-bbe50a5f5d3f
+
+  catalog:
+    description: Unity Catalog catalog for this target (see project_config.yml).
+    default: llmops_dev
+
+  schema:
+    description: Schema inside the catalog.
+    default: katy_chen
+
+  warehouse_id:
+    description: SQL warehouse used by the Genie space.
+    default: "2458a9ee0cc14a64"

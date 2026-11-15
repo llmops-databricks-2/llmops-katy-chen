@@ -51,6 +51,12 @@ pythonpath = ["."]
 [tool.ruff]
 line-length = 120
 target-version = "py312"
+# Lecture notebooks are course material copied as-is; don't lint or reformat them.
+# force-exclude makes the exclusion apply to files pre-commit passes explicitly too.
+extend-exclude = ["notebooks/lecture"]
+force-exclude = true
+# Globals injected by the Databricks notebook runtime
+builtins = ["display", "dbutils", "spark"]
 lint.select = [
     "F",    # pyflakes rules
     "E",    # pycodestyle error rules

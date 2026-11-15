@@ -1,0 +1,100 @@
+resources:
+  genie_spaces:
+    recipe-curator-space:
+      title: recipe-curator-space
+      description: >-
+        Ask questions about the recipes ingested from the Kaggle dataset
+        'Better Recipes for a Better Life' (table recipes_input).
+      warehouse_id: "${var.warehouse_id}"
+      # Genie validates this strictly: every id is 32 lowercase hex characters, id-keyed
+      # lists are sorted by id, and column_configs are sorted by column_name.
+      serialized_space:
+        version: 2
+        config:
+          sample_questions:
+            - id: "10000000000000000000000000000001"
+              question: ["What are the 10 highest rated recipes?"]
+            - id: "10000000000000000000000000000002"
+              question: ["Which recipes can I make in under 30 minutes?"]
+            - id: "10000000000000000000000000000003"
+              question: ["How many recipes are there per top-level category?"]
+            - id: "10000000000000000000000000000004"
+              question: ["Which recipes contain chicken and garlic?"]
+        data_sources:
+          tables:
+            - identifier: "${var.catalog}.${var.schema}.recipes_input"
+              column_configs:
+                - column_name: cook_time
+                  synonyms: ["cooking time"]
+                - column_name: cuisine_path
+                  synonyms: ["category", "cuisine", "course", "recipe type"]
+                  enable_format_assistance: true
+                  enable_entity_matching: true
+                - column_name: directions
+                  synonyms: ["instructions", "method", "steps"]
+                - column_name: img_src
+                  exclude: true
+                - column_name: ingestion_timestamp
+                  enable_format_assistance: true
+                - column_name: ingredients
+                  synonyms: ["ingredient list"]
+                - column_name: nutrition
+                  synonyms: ["nutrition facts", "calories", "macros"]
+                - column_name: prep_time
+                  synonyms: ["preparation time"]
+                - column_name: rating
+                  synonyms: ["score", "stars", "review score"]
+                  enable_format_assistance: true
+                - column_name: recipe_name
+                  synonyms: ["recipe", "dish", "title"]
+                  enable_format_assistance: true
+                  enable_entity_matching: true
+                - column_name: row_id
+                  synonyms: ["recipe id", "id"]
+                - column_name: servings
+                  synonyms: ["portions", "serves"]
+                - column_name: timing
+                  exclude: true
+                - column_name: total_time
+                  synonyms: ["duration", "time to make", "how long"]
+                - column_name: url
+                  synonyms: ["link", "source"]
+                - column_name: yield
+        instructions:
+          text_instructions:
+            - id: "30000000000000000000000000000001"
+              content:
+                - "Each row in recipes_input is one recipe."
+                - "prep_time, cook_time and total_time are free-text strings such as '1 hrs 10 mins', not numbers. To compare, filter, sort or average by time, always convert to minutes with ${var.catalog}.${var.schema}.parse_duration_minutes(<column>); never parse the text yourself. The function returns NULL when the text has no recognizable duration, so exclude NULL results."
+                - "cuisine_path is a slash-separated category path that starts with '/'. The top-level category is split(cuisine_path, '/')[1] and the most specific category is element_at(filter(split(cuisine_path, '/'), x -> x != ''), -1)."
+                - "ingredients is free text. To filter by ingredient use ingredients ILIKE '%<ingredient>%', and combine several ingredients with AND."
+                - "'Best', 'top' or 'highest rated' recipes means ordering by rating descending, ignoring NULL ratings."
+                - "yield is a reserved word; always quote it with backticks."
+                - "When listing recipes, show recipe_name, rating, total_time and url. Show ingredients, directions or nutrition only when the user asks for them."
+          example_question_sqls:
+            - id: "20000000000000000000000000000001"
+              question: ["What are the 10 highest rated recipes?"]
+              sql:
+                - "SELECT recipe_name, rating, total_time, url "
+                - "FROM ${var.catalog}.${var.schema}.recipes_input "
+                - "WHERE rating IS NOT NULL "
+                - "ORDER BY rating DESC, recipe_name LIMIT 10"
+            - id: "20000000000000000000000000000002"
+              question: ["Which recipes can I make in under 30 minutes?"]
+              sql:
+                - "SELECT recipe_name, rating, total_time, "
+                - "${var.catalog}.${var.schema}.parse_duration_minutes(total_time) AS total_minutes, url "
+                - "FROM ${var.catalog}.${var.schema}.recipes_input "
+                - "WHERE ${var.catalog}.${var.schema}.parse_duration_minutes(total_time) < 30 "
+                - "ORDER BY rating DESC NULLS LAST"
+            - id: "20000000000000000000000000000003"
+              question: ["How many recipes are there per top-level category?"]
+              sql:
+                - "SELECT split(cuisine_path, '/')[1] AS category, COUNT(*) AS recipe_count "
+                - "FROM ${var.catalog}.${var.schema}.recipes_input "
+                - "GROUP BY 1 ORDER BY recipe_count DESC"
+          # UC functions Genie may call in its SQL. They must exist before the space is deployed
+          # (parse_duration_minutes is created in notebooks/04_custom_tools.py).
+          sql_functions:
+            - id: "40000000000000000000000000000001"
+              identifier: "${var.catalog}.${var.schema}.parse_duration_minutes"

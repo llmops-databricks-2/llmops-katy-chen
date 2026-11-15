@@ -1,15 +1,4 @@
-"""Process arXiv papers from download to cleaned text chunks.
-
-arXiv API
-   ↓ (download_and_store_papers)
-PDFs in Volume + arxiv_papers table
-   ↓ (parse_pdfs_with_ai)
-ai_parsed_docs_table (JSON)
-   ↓ (process_chunks)
-arxiv_chunks_table (clean text + metadata)
-   ↓ (LakebasePgVectorManager - separate class) (2.4 notebook)
-Lakebase pgvector table (embeddings)
-"""
+"""Data processing: chunking recipes and the arXiv ingestion pipeline."""
 
 import json
 import os
@@ -25,6 +14,7 @@ from pyspark.sql.functions import (
     concat_ws,
     current_timestamp,
     explode,
+    expr,
     udf,
 )
 from pyspark.sql.types import ArrayType, StringType, StructField, StructType
@@ -32,9 +22,40 @@ from pyspark.sql.types import ArrayType, StringType, StructField, StructType
 from recipe_curator.config import ProjectConfig
 
 
-class DataProcessor:
-    """Handle the complete arXiv paper processing workflow.
+def chunk_recipe(SECTION_HEADER: re.Pattern[str], content: str) -> list[tuple[str, int, str]]:
+    """Split one recipe_content string into (section, paragraph_index, text) chunks."""
+    if not content or not content.strip():
+        return []
 
+    content = content.replace("\r\n", "\n").replace("\r", "\n")
+    headers = list(SECTION_HEADER.finditer(content))
+
+    if not headers or content[: headers[0].start()].strip():
+        raise ValueError("Recipe must start with Ingredients:, Directions:, Nutrition:, or Timing:")
+
+    chunks = []
+
+    for index, header in enumerate(headers):
+        section = header.group(1).lower()
+        end = headers[index + 1].start() if index + 1 < len(headers) else len(content)
+        body = content[header.end() : end].strip()
+
+        if not body:
+            continue
+
+        for paragraph_index, paragraph in enumerate(re.split(r"\n+", body)):
+            text = re.sub(r"\s+", " ", paragraph).strip()
+
+            if text:
+                chunks.append((section, paragraph_index, text))
+
+    return chunks
+
+
+class arXivDataProcessor:
+    """Run the complete arXiv ingestion workflow.
+
+    Steps:
     - Downloading papers from arXiv
     - Storing paper metadata
     - Parsing PDFs with ai_parse_document
@@ -244,7 +265,7 @@ class DataProcessor:
         return t.strip()
 
     def process_chunks(self) -> None:
-        """Process parsed documents to extract and clean chunks.
+        """Process parsed documents to extract, clean, and embed chunks.
 
         Reads from ai_parsed_docs table and saves to arxiv_chunks table.
         """
@@ -290,9 +311,17 @@ class DataProcessor:
             .join(metadata_df, "arxiv_id", "left")
         )
 
-        # Write to table
+        # Generate embeddings with the configured model
+        # (ai_query is used via expr: not every runtime exposes it in pyspark.sql.functions)
+        endpoint = self.cfg.embedding_endpoint.replace("'", "''")
+        chunks_df = chunks_df.withColumn(
+            "embedding",
+            expr(f"CAST(ai_query('{endpoint}', text) AS ARRAY<FLOAT>)"),
+        )
+
+        # Write to table (mergeSchema adds the embedding column to existing tables)
         arxiv_chunks_table = f"{self.catalog}.{self.schema}.arxiv_chunks_table"
-        chunks_df.write.mode("append").saveAsTable(arxiv_chunks_table)
+        chunks_df.write.mode("append").option("mergeSchema", "true").saveAsTable(arxiv_chunks_table)
         logger.info(f"Saved chunks to {arxiv_chunks_table}")
 
         # Enable Change Data Feed
